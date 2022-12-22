@@ -394,7 +394,7 @@ local function change_bullet_level(direction)
   end
 
   local curr_indent = vim.fn.indent(lnum)
-  local curr_bullet= closest_bullet_types(lnum, curr_indent)
+  local curr_bullet = closest_bullet_types(lnum, curr_indent)
   curr_bullet = resolve_bullet_type(curr_bullet)
 
   curr_line = curr_bullet.starting_at_line_num
@@ -408,11 +408,7 @@ local function change_bullet_level(direction)
 
   local islower = closest_bullet.bullet == string.lower(closest_bullet.bullet)
   local closest_indent = vim.fn.indent(closest_bullet.starting_at_line_num)
-
-  local closest_type = closest_bullet.type
-  if islower then
-    closest_type = string.upper(closest_bullet.type)
-  end
+  local closest_type = islower and closest_bullet.type or string.upper(closest_bullet.type)
   if closest_bullet.type == 'std' then
     -- Append the bullet marker to the type, e.g., 'std*'
    closest_type = closest_type .. closest_bullet.bullet
@@ -442,38 +438,38 @@ local function change_bullet_level(direction)
     -- bullet_str = pad_to_length(next_bullet, closest_bullet.bullet_length) .. curr_bullet.text_after_bullet
     bullet_str = next_bullet_str(closest_bullet) .. curr_bullet.text_after_bullet
 
-  elseif closest_index + 1 >= #bullets_outline_levels and curr_indent > closest_indent then
+  elseif closest_index + 1 > #bullets_outline_levels and curr_indent > closest_indent then
     -- The closest bullet is a parent and its type is the last one defined in
     -- g:bullets_outline_levels so keep the existing bullet.
     -- TODO: Might make an option for whether the bullet should stay or be
     -- deleted when demoting past the end of the defined bullet types.
     return
-  elseif closest_index + 1 < #bullets_outline_levels or curr_indent < closest_indent then
+  elseif closest_index + 1 <= #bullets_outline_levels or curr_indent < closest_indent then
     -- The current bullet is a child of the closest bullet so figure out
     -- what bullet type it should have and set its marker to the first
     -- character of that type.
 
     local next_type = bullets_outline_levels[closest_index + 1]
     local next_islower = next_type == string.lower(next_type)
-    local trailing_space = ' '
+    -- local trailing_space = ' '
     curr_bullet.closure = closest_bullet.closure
 
     -- set the bullet marker to the first character of the new type
     local next_num
-    if next_type == 'rom' then
+    if next_type == 'rom' or next_type == 'ROM' then
       next_num = num_to_rom(1, next_islower)
-    elseif next_type == 'abc' then
+    elseif next_type == 'abc' or next_type == 'ABC' then
       next_num = dec2abc(1, next_islower)
-    elseif next_type ==# 'num' then
+    elseif next_type == 'num' then
       next_num = '1'
     else
       -- standard bullet; the last character of next_type contains the bullet
       -- symbol to use
-      next_num = string.sub(next_type, string.len(next_type) - 1, string.len(next_type))
+      next_num = string.sub(next_type, -1)
       curr_bullet.closure = ''
     end
 
-    bullet_str = curr_bullet.leading_space .. next_num .. curr_bullet.closure .. trailing_space .. curr_bullet.text_after_bullet
+    bullet_str = curr_bullet.leading_space .. next_num .. curr_bullet.closure .. curr_bullet.trailing_space .. curr_bullet.text_after_bullet
 
   else
     -- We're outside of the defined outline levels
