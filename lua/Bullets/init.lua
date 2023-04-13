@@ -794,10 +794,10 @@ H.toggle_checkbox = function(lnum)
   -- get markers that aren't empty or fully checked
   local partial_markers = string.sub(checkbox_markers, 2, #checkbox_markers - 1)
   local marker
-  if Bullets.config.checkbox.toggle_partials > 0 and string.find(partial_markers, checkbox_content) ~= nil then
+  if Bullets.config.checkbox.toggle_partials and string.find(partial_markers, checkbox_content) ~= nil then
     -- Partially complete
     marker = string.sub(checkbox_markers, 1, 1)
-    if Bullets.config.checkbox.toggle_partials > 0 then
+    if Bullets.config.checkbox.toggle_partials then
       marker = string.sub(checkbox_markers,#checkbox_markers, 1)
     end
   elseif checkbox_content == string.sub(checkbox_markers, 1, 1) then
