@@ -747,7 +747,7 @@ end
 -- Checkboxes --------------------------------------------- {{{
 H.find_checkbox_position = function(lnum)
   local line_text = vim.fn.getline(lnum)
-  return vim.fn.matchend(line_text, "\\v\\s*(\\*|-) \\[")
+  return vim.fn.matchend(line_text, "\\v\\s*(\\*|-) \\[") + 1
 end
 
 Bullets.select_checkbox = function(inner)
@@ -774,14 +774,14 @@ H.set_checkbox = function(lnum, marker)
   if pos >= 0 then
     local front = string.sub(curline, 1, pos - 1)
     local back = string.sub(curline, pos + 1)
-    vim.fn.setline(lnum, front, marker, back)
+    vim.fn.setline(lnum, front .. marker .. back)
     vim.fn.setpos('.', initpos)
   end
 end
 
 H.toggle_checkbox = function(lnum)
   -- Toggles the checkbox on line a:lnum.
-  -- Returns the resulting statu (1) checked, (0) unchecked, (-1) unchanged
+  -- Returns the resulting status (1) checked, (0) unchecked, (-1) unchanged
   local indent = vim.fn.indent(lnum)
   local bullet = H.closest_bullet_types(lnum, indent)
   bullet = H.resolve_bullet_type(bullet)
@@ -793,16 +793,16 @@ H.toggle_checkbox = function(lnum)
   local checkbox_markers = Bullets.config.checkbox.markers
   -- get markers that aren't empty or fully checked
   local partial_markers = string.sub(checkbox_markers, 2, #checkbox_markers - 1)
-  local marker
+  local marker = string.sub(checkbox_markers, 1, 1)
   if Bullets.config.checkbox.toggle_partials and string.find(partial_markers, checkbox_content) ~= nil then
     -- Partially complete
-    marker = string.sub(checkbox_markers, 1, 1)
     if Bullets.config.checkbox.toggle_partials then
-      marker = string.sub(checkbox_markers,#checkbox_markers, 1)
+      marker = string.sub(checkbox_markers, -1)
     end
   elseif checkbox_content == string.sub(checkbox_markers, 1, 1) then
-    marker = string.sub(checkbox_markers,#checkbox_markers, 1)
-  elseif string.find(checkbox_content, 'x') ~= nil or string.find(checkbox_content, 'X') ~= nil or string.find(checkbox_content, string.sub(checkbox_markers, #checkbox_markers, 1)) ~= nil then
+    marker = string.sub(checkbox_markers, -1)
+    -- marker = string.sub(checkbox_markers,#checkbox_markers, 1)
+  elseif string.find(checkbox_content, 'x') ~= nil or string.find(checkbox_content, 'X') ~= nil or string.find(checkbox_content, string.sub(checkbox_markers, -1)) ~= nil then
     marker = string.sub(checkbox_markers, 1, 1)
   else
     return -1
@@ -884,15 +884,15 @@ H.sibling_checkbox_status = function(lnum)
     local bullet = H.closest_bullet_types(l, indent)
     bullet = H.resolve_bullet_type(bullet)
     if next(bullet) ~= nil and bullet.checkbox_marker ~= "" then
-      if string.find(bullet.checkbox_marker, string.sub(checkbox_markers,string.len(checkbox_markers), 1)) ~= nil then
+      if string.find(string.sub(checkbox_markers, 2, #checkbox_markers), bullet.checkbox_marker) ~= nil then
         -- Checked
         checked = checked + 1
       end
     end
   end
-  local divisions = string.len(checkbox_markers) - 1
-  local completion = math.ceil(divisions * checked / num_siblings)
-  return string.sub(checkbox_markers, completion, 1)
+  local divisions = #checkbox_markers - 1
+  local completion = 1 + math.floor(divisions * checked / num_siblings)
+  return string.sub(checkbox_markers, completion, completion)
 end
 
 H.get_parent = function(lnum)
@@ -964,10 +964,11 @@ Bullets.toggle_checkboxes_nested = function()
   if Bullets.config.checkbox.nest then
     -- Toggle children and parents
     local completion_marker = H.sibling_checkbox_status(lnum)
+    print("completion marker:"..completion_marker..".")
     H.set_parent_checkboxes(lnum, completion_marker)
 
     -- Toggle children
-    if checked >= 0 then
+    if checked then
       H.set_child_checkboxes(lnum, checked)
     end
   end
