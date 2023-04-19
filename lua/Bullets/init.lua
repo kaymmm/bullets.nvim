@@ -643,15 +643,15 @@ end
 
 Bullets.visual_change_bullet_level = function(direction)
   -- Changes the bullet level for each of the selected lines
-  local start_val = { unpack(vim.fn.getpos("'<"), 2, 2) }
-  local end_val = { unpack(vim.fn.getpos("'>"), 2, 2) }
+  local start_val = { unpack(vim.fn.getpos("'<"), 2, 3) }
+  local end_val = { unpack(vim.fn.getpos("'>"), 2, 3) }
   local selected_lines = {start_val[1]}
   local j = 1
   for i = start_val[1], end_val[1] do
     selected_lines[j] = i
     j = j + 1
   end
-  for lnum in selected_lines do
+  for k, lnum in ipairs(selected_lines) do
     -- Iterate the cursor position over each line and then call
     -- H.change_bullet_level for that cursor position.
     vim.fn.setpos('.', {0, lnum, 1, 0})
