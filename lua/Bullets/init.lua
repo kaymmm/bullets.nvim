@@ -100,7 +100,8 @@ H.apply_config = function(config)
   vim.api.nvim_create_user_command('BulletDemoteVisual', function() Bullets.visual_change_bullet_level(-1) end, {range = true})
   vim.api.nvim_create_user_command('BulletPromote', function() Bullets.change_bullet_level_and_renumber(1) end, {})
   vim.api.nvim_create_user_command('BulletPromoteVisual', function() Bullets.visual_change_bullet_level(1) end, {range = true})
-  vim.api.nvim_create_user_command('InsertNewBullet', function() Bullets.insert_new_bullet() end, {})
+  vim.api.nvim_create_user_command('InsertNewBulletCR', function() Bullets.insert_new_bullet("cr") end, {})
+  vim.api.nvim_create_user_command('InsertNewBulletO', function() Bullets.insert_new_bullet("o") end, {})
   vim.api.nvim_create_user_command('RenumberList', function() Bullets.renumber_whole_list() end, {})
   vim.api.nvim_create_user_command('RenumberSelection', function() Bullets.renumber_selection() end, {range = true})
   -- vim.api.nvim_create_user_command('SelectBullet', function() Bullets.select_bullet_item(vim.cmd.line('.')) end, {})
@@ -109,8 +110,9 @@ H.apply_config = function(config)
   vim.api.nvim_create_user_command('SelectCheckboxInside', function() Bullets.select_checkbox(true) end, {})
   vim.api.nvim_create_user_command('ToggleCheckbox', function() Bullets.toggle_checkboxes_nested() end, {})
 
-  vim.api.nvim_set_keymap('i', '<Plug>(bullets-newline)', '<C-O>:InsertNewBullet<cr>', {noremap = true, silent = true})
-  vim.api.nvim_set_keymap('n', '<Plug>(bullets-newline)', ':InsertNewBullet<cr>', {noremap = true, silent = true})
+  vim.api.nvim_set_keymap('i', '<Plug>(bullets-newline-cr)', '<C-O>:InsertNewBulletCR<cr>', {noremap = true, silent = true})
+  vim.api.nvim_set_keymap('n', '<Plug>(bullets-newline-o)', ':InsertNewBulletO<cr>', {noremap = true, silent = true})
+  -- vim.api.nvim_set_keymap('n', '<Plug>(bullets-newline)', ':InsertNewBullet<cr>', {noremap = true, silent = true})
   vim.api.nvim_set_keymap('v', '<Plug>(bullets-renumber)', ':RenumberSelection<cr>', {noremap = true, silent = true})
   vim.api.nvim_set_keymap('n', '<Plug>(bullets-renumber)', ':RenumberList<cr>', {noremap = true, silent = true})
   vim.api.nvim_set_keymap('n', '<Plug>(bullets-toggle-checkbox)', ':ToggleCheckbox<cr>', {noremap = true, silent = true})
@@ -123,9 +125,9 @@ H.apply_config = function(config)
 
   if config.mappings then
     vim.api.nvim_create_augroup('BulletMaps', {clear = true})
-    H.buf_map('imap', '<cr>', '<Plug>(bullets-newline)')
+    H.buf_map('imap', '<cr>', '<Plug>(bullets-newline-cr)')
     -- H.buf_map('inoremap', '<C-CR>', '<CR>')
-    H.buf_map('nmap', 'o', '<Plug>(bullets-newline)')
+    H.buf_map('nmap', 'o', '<Plug>(bullets-newline-o)')
     H.buf_map('vmap', 'gN', '<Plug>(bullets-renumber)')
     H.buf_map('nmap', 'gN', '<Plug>(bullets-renumber)')
     H.buf_map('nmap', '<leader>x', '<Plug>(bullets-toggle-checkbox)')
@@ -516,7 +518,7 @@ end
 
 H.line_ends_in_colon = function(lnum)
   local line = vim.fn.getline(lnum)
-  return string.sub(line, string.len(line)-1,string.len(line)) == ":"
+  return string.sub(line, string.len(line)) == ":"
 end
 
 H.change_bullet_level = function(direction)
@@ -545,8 +547,7 @@ H.change_bullet_level = function(direction)
       vim.cmd("startinsert!")
     end
 
-    local keys = ""
-    keys = vim.api.nvim_replace_termcodes("<CR>", true, false, true)
+    local keys = vim.api.nvim_replace_termcodes("<CR>", true, false, true)
     vim.api.nvim_feedkeys(keys, 'n', true)
 
     return
@@ -964,7 +965,6 @@ Bullets.toggle_checkboxes_nested = function()
   if Bullets.config.checkbox.nest then
     -- Toggle children and parents
     local completion_marker = H.sibling_checkbox_status(lnum)
-    print("completion marker:"..completion_marker..".")
     H.set_parent_checkboxes(lnum, completion_marker)
 
     -- Toggle children
@@ -1113,8 +1113,10 @@ Bullets.change_bullet_level_and_renumber = function(direction)
   end
 end
 
-Bullets.insert_new_bullet = function()
+Bullets.insert_new_bullet = function(trigger)
   local curr_line_num = vim.fn.line('.')
+  local cursor_pos = vim.fn.getcurpos('.')
+  local line_text = vim.fn.getline('.')
   local next_line_num = curr_line_num + Bullets.config.line_spacing
   local curr_indent = vim.fn.indent(curr_line_num)
   local bullet_types = H.closest_bullet_types(curr_line_num, curr_indent)
@@ -1140,7 +1142,14 @@ Bullets.insert_new_bullet = function()
           send_return = false
         end
       elseif not (bullet.type == 'abc' and H.abc2dec(bullet.bullet) + 1 > Bullets.config.abc_max) then
-        local next_bullet = H.next_bullet_str(bullet)
+        -- get text after cursor
+        local text_after_cursor = ''
+        if string.len(vim.fn.getline('.')) > vim.fn.col('.') then
+          text_after_cursor = string.sub(line_text, cursor_pos[3])
+          vim.fn.setline('.', string.sub(line_text,1,cursor_pos[3] - 1))
+        end
+
+        local next_bullet = H.next_bullet_str(bullet) .. text_after_cursor
         -- if bullet.type == 'chk' then
         next_bullet_list = {next_bullet}
         -- else
@@ -1153,6 +1162,7 @@ Bullets.insert_new_bullet = function()
             table.insert(next_bullet_list, i, '')
           end
         end
+
 
         -- insert next bullet
         vim.fn.append(curr_line_num, next_bullet_list)
@@ -1176,15 +1186,20 @@ Bullets.insert_new_bullet = function()
     end
   end
 
-  if send_return or normal_mode then
+  -- if send_return or normal_mode then
+  if send_return then
     -- start a new line
+    -- local keys = ''
     if normal_mode then
-      vim.cmd('startinsert!')
+      if trigger == "cr" then
+        vim.cmd('startinsert')
+      else
+        vim.cmd('startinsert!')
+      end
     end
 
-    local keys = ''
     if send_return then
-      keys = vim.api.nvim_replace_termcodes('<CR>', true, false, true)
+      local keys = vim.api.nvim_replace_termcodes('<CR>', true, false, true)
       vim.api.nvim_feedkeys(keys, 'n', true)
     end
   end
