@@ -1144,7 +1144,7 @@ Bullets.insert_new_bullet = function(trigger)
       elseif not (bullet.type == 'abc' and H.abc2dec(bullet.bullet) + 1 > Bullets.config.abc_max) then
         -- get text after cursor
         local text_after_cursor = ''
-        if string.len(vim.fn.getline('.')) > vim.fn.col('.') then
+        if string.len(vim.fn.getline('.')) > vim.fn.col('.') and trigger == 'cr' then
           text_after_cursor = string.sub(line_text, cursor_pos[3])
           vim.fn.setline('.', string.sub(line_text,1,cursor_pos[3] - 1))
         end
