@@ -1186,22 +1186,16 @@ Bullets.insert_new_bullet = function(trigger)
     end
   end
 
-  -- if send_return or normal_mode then
   if send_return then
-    -- start a new line
-    -- local keys = ''
     if normal_mode then
       if trigger == "cr" then
         vim.cmd('startinsert')
-      else
-        vim.cmd('startinsert!')
       end
     end
-
-    if send_return then
-      local keys = vim.api.nvim_replace_termcodes('<CR>', true, false, true)
-      vim.api.nvim_feedkeys(keys, 'n', true)
-    end
+    local keys = vim.api.nvim_replace_termcodes('<CR>', true, false, true)
+    vim.api.nvim_feedkeys(keys, 'n', true)
+  elseif trigger == "o" then
+    vim.cmd('startinsert!')
   end
 
   -- need to return a string since we are in insert mode calling with <C-R>=
