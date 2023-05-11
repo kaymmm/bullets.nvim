@@ -1187,14 +1187,14 @@ Bullets.insert_new_bullet = function(trigger)
   end
 
   if send_return then
-    if normal_mode then
-      if trigger == "cr" then
-        vim.cmd('startinsert')
-      end
+    if trigger == "cr" and normal_mode then
+      vim.cmd('startinsert')
+    elseif trigger == 'o' then
+      vim.cmd('startinsert!')
     end
     local keys = vim.api.nvim_replace_termcodes('<CR>', true, false, true)
     vim.api.nvim_feedkeys(keys, 'n', true)
-  elseif trigger == "o" then
+  elseif trigger == 'o' then
     vim.cmd('startinsert!')
   end
 
