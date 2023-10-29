@@ -639,7 +639,7 @@ H.change_bullet_level = function(direction)
   -- Apply the new bullet
   vim.fn.setline(lnum, bullet_str)
 
-  vim.cmd("execute 'normal! $'")
+  -- vim.cmd("execute 'normal! $'")
 end
 
 Bullets.visual_change_bullet_level = function(direction)
@@ -663,6 +663,7 @@ Bullets.visual_change_bullet_level = function(direction)
     -- renumbering the list.
     Bullets.renumber_whole_list(start_val, end_val)
   end
+  vim.cmd("execute 'gv'")
 end
 
 H.first_bullet_line = function(line_num, min_indent)
