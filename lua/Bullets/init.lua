@@ -529,13 +529,13 @@ H.change_bullet_level = function(direction)
     if next(curr_line) ~= nil and vim.fn.indent(lnum) == 0 then
       -- Promoting a bullet at the highest level will delete the bullet
       vim.fn.setline(lnum, curr_line.text_after_bullet)
-      vim.cmd("execute 'normal! $'")
+      vim.cmd("normal! $")
       return
     else
-      vim.cmd("execute 'normal! <<$'")
+      vim.cmd("normal! <<$")
     end
   else
-    vim.cmd("execute 'normal! >>$'")
+    vim.cmd("normal! >>$")
   end
 
   if next(curr_line) == nil then
@@ -663,7 +663,7 @@ Bullets.visual_change_bullet_level = function(direction)
     -- renumbering the list.
     Bullets.renumber_whole_list(start_val, end_val)
   end
-  vim.cmd("execute 'gv'")
+  vim.cmd("normal! gv")
 end
 
 H.first_bullet_line = function(line_num, min_indent)
@@ -1101,7 +1101,7 @@ Bullets.renumber_whole_list = function(start_pos, end_pos)
       -- Reset the starting visual selection
       vim.fn.setpos("'<", {0, spos[1], spos[2], 0})
       vim.fn.setpos("'>", {0, epos[1], epos[2], 0})
-      vim.cmd("execute 'normal! gv'")
+      vim.cmd("normal! gv")
     end
   end
 end
