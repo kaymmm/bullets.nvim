@@ -2,6 +2,8 @@
 -- Author: Keith Miyake
 -- Rewritten from https://github.com/dkarter/bullets.vim
 -- License: GPLv3, MIT
+-- Copyright (c) 2024 Keith Miyake
+-- See LICENSE
 
 
 -- --------------------------------------------
@@ -96,10 +98,10 @@ H.apply_config = function(config)
   end
   Bullets.config = config
 
-  vim.api.nvim_create_user_command('BulletDemote', function() Bullets.change_bullet_level_and_renumber(-1) end, {})
-  vim.api.nvim_create_user_command('BulletDemoteVisual', function() Bullets.visual_change_bullet_level(-1) end, {range = true})
-  vim.api.nvim_create_user_command('BulletPromote', function() Bullets.change_bullet_level_and_renumber(1) end, {})
-  vim.api.nvim_create_user_command('BulletPromoteVisual', function() Bullets.visual_change_bullet_level(1) end, {range = true})
+  vim.api.nvim_create_user_command('BulletDemote', function() Bullets.change_bullet_level(-1, 0) end, {})
+  vim.api.nvim_create_user_command('BulletDemoteVisual', function() Bullets.change_bullet_level(-1, 1) end, {range = true})
+  vim.api.nvim_create_user_command('BulletPromote', function() Bullets.change_bullet_level(1, 0) end, {})
+  vim.api.nvim_create_user_command('BulletPromoteVisual', function() Bullets.change_bullet_level(1, 1) end, {range = true})
   vim.api.nvim_create_user_command('InsertNewBulletCR', function() Bullets.insert_new_bullet("cr") end, {})
   vim.api.nvim_create_user_command('InsertNewBulletO', function() Bullets.insert_new_bullet("o") end, {})
   vim.api.nvim_create_user_command('RenumberList', function() Bullets.renumber_whole_list() end, {})
@@ -521,21 +523,22 @@ H.line_ends_in_colon = function(lnum)
   return string.sub(line, string.len(line)) == ":"
 end
 
-H.change_bullet_level = function(direction)
-  local lnum = vim.fn.line('.')
+H.change_line_bullet_level = function(direction, lnum)
+  -- local lnum = vim.fn.line('.')
   local curr_line = H.parse_bullet(lnum, vim.fn.getline(lnum))
 
   if direction == 1 then
     if next(curr_line) ~= nil and vim.fn.indent(lnum) == 0 then
       -- Promoting a bullet at the highest level will delete the bullet
-      vim.fn.setline(lnum, curr_line.text_after_bullet)
-      vim.cmd("normal! $")
+      vim.fn.setline(lnum, curr_line[0].text_after_bullet)
+      -- vim.cmd("normal! $")
       return
     else
-      vim.cmd("normal! <<$")
+      -- vim.cmd("normal! <<$")
+      vim.cmd(lnum .. "normal! <<")
     end
   else
-    vim.cmd("normal! >>$")
+    vim.cmd(lnum .. "normal! >>")
   end
 
   if next(curr_line) == nil then
@@ -638,32 +641,35 @@ H.change_bullet_level = function(direction)
 
   -- Apply the new bullet
   vim.fn.setline(lnum, bullet_str)
-
-  -- vim.cmd("execute 'normal! $'")
 end
 
-Bullets.visual_change_bullet_level = function(direction)
+Bullets.change_bullet_level = function(direction, is_visual)
   -- Changes the bullet level for each of the selected lines
-  local start_val = { unpack(vim.fn.getpos("'<"), 2, 3) }
-  local end_val = { unpack(vim.fn.getpos("'>"), 2, 3) }
-  local selected_lines = {start_val[1]}
-  local j = 1
-  for i = start_val[1], end_val[1] do
-    selected_lines[j] = i
-    j = j + 1
-  end
-  for k, lnum in ipairs(selected_lines) do
-    -- Iterate the cursor position over each line and then call
-    -- H.change_bullet_level for that cursor position.
-    vim.fn.setpos('.', {0, lnum, 1, 0})
-    H.change_bullet_level(direction)
+  -- local start_val = { unpack(vim.fn.getpos("'<"), 2, 3) }
+  -- local end_val = { unpack(vim.fn.getpos("'>"), 2, 3) }
+  -- local selected_lines = {start_val[1]}
+  -- local j = 1
+  -- for i = start_val[1], end_val[1] do
+  --   selected_lines[j] = i
+  --   j = j + 1
+  -- end
+  -- for k, lnum in ipairs(selected_lines) do
+  --   -- Iterate the cursor position over each line and then call
+  --   -- H.change_bullet_level for that cursor position.
+  --   vim.fn.setpos('.', {0, lnum, 1, 0})
+  --   H.change_bullet_level(direction)
+  -- end
+  local sel = H.get_selection(is_visual)
+  for lnum = sel.start_line, sel.end_line do
+    H.change_line_bullet_level(direction, lnum)
   end
   if Bullets.config.renumber then
     -- Pass the current visual selection so that it gets reset after
     -- renumbering the list.
-    Bullets.renumber_whole_list(start_val, end_val)
+    Bullets.renumber_whole_list()
   end
-  vim.cmd("normal! gv")
+  -- vim.cmd("normal! gv")
+  H.set_selection(sel)
 end
 
 H.first_bullet_line = function(line_num, min_indent)
@@ -729,7 +735,7 @@ H.get_visual_selection_lines = function()
   local pos2 = vim.fn.getpos("'>")
   local lines = vim.fn.getline(pos1[2], pos2[2])
   local inclusive = 2
-  if vim.api.nvim_get_option("selection") == "inclusive" then
+  if vim.api.nvim_get_option_value("selection") == "inclusive" then
     inclusive = 1
   end
   lines[#lines] = string.sub(lines[#lines], 1, pos2[3] - inclusive)
@@ -744,6 +750,43 @@ H.get_visual_selection_lines = function()
     index = index + 1
   end
   return lines_with_index
+end
+
+H.get_selection = function(is_visual)
+  local sel = {}
+  local mode = is_visual and vim.fn.visualmode() or ""
+  if mode == "v" or mode == "V" or mode == "<C-v>" then
+    local start_line, start_col = vim.fn.getpos("'<")[1], vim.fn.getpos("'>")[2]
+    sel.start_line = start_line
+    sel.start_offset = string.len(vim.fn.getline(sel.start_line)) - start_col
+    local end_line, end_col = vim.fn.getpos("'>")[1], vim.fn.getpos("'>")[2]
+    sel.end_line = end_line
+    sel.end_offset = string.len(vim.fn.getline(sel.end_line)) - end_col
+    sel.visual_mode = mode
+  else
+    sel.start_line = vim.fn.line(".")
+    sel.start_offset = string.len(vim.fn.getline(sel.start_line)) - vim.fn.col(".")
+    sel.end_line = sel.start_line
+    sel.end_offset = sel.start_offset
+    sel.visual_mode = ""
+  end
+  return sel
+end
+
+H.set_selection = function(sel)
+  local start_col = string.len(vim.fn.getline(sel.start_line)) - sel.start_offset
+  local end_col = string.len(vim.fn.getline(sel.end_line)) - sel.end_offset
+  vim.fn.cursor(sel.start_line, start_col)
+  if sel.start_line ~= sel.end_line or start_col ~= end_col then
+    if sel.visual_mode == "<C-v>" then
+      vim.cmd("normal! <C-v>")
+    else
+      if sel.visual_mode == "V" or sel.visual_mode == "v" then
+        vim.cmd("normal! v")
+      end
+    end
+    vim.fn.cursor(sel.end_line, end_col)
+  end
 end
 
 -- Checkboxes --------------------------------------------- {{{
@@ -987,13 +1030,21 @@ H.get_level = function(bullet)
 end
 
 Bullets.renumber_selection = function()
-  local selection_lines = H.get_visual_selection_lines()
+  local sel = H.get_selection(1)
+  Bullets.renumber_lines(sel.start_line, sel.end_line)
+  H.set_selection(sel)
+end
+
+Bullets.renumber_lines = function(start_ln, end_ln)
   local prev_indent = -1
   local list = {}  -- stores all the info about the current outline/list
 
-  for _, line in ipairs(selection_lines) do
-    local indent = vim.fn.indent(line.nr)
-    local bullet = H.closest_bullet_types(line.nr, indent)
+  -- for _, line in ipairs(selection_lines) do
+    -- local indent = vim.fn.indent(line.nr)
+    -- local bullet = H.closest_bullet_types(line.nr, indent)
+  for nr = start_ln, end_ln do
+    local indent = vim.fn.indent(nr)
+    local bullet = H.closest_bullet_types(nr, indent)
     bullet = H.resolve_bullet_type(bullet)
     local curr_level = H.get_level(bullet)
     if curr_level > 1 then
@@ -1001,7 +1052,7 @@ Bullets.renumber_selection = function()
       break
     end
 
-    if next(bullet) ~= nil and bullet.starting_at_line_num == line.nr then
+    if next(bullet) ~= nil and bullet.starting_at_line_num == nr then
       -- skip wrapped lines and lines that aren't bullets
       if (indent > prev_indent or list[indent] == nil) and bullet.type ~= 'chk' and bullet.type ~= 'std' then
         if list[indent] == nil then
@@ -1068,14 +1119,14 @@ Bullets.renumber_selection = function()
           -- end
           -- list[indent].pad_len = string.len(new_bullet)
           local renumbered_line = bullet.leading_space .. new_bullet .. bullet.text_after_bullet
-          vim.fn.setline(line.nr, renumbered_line)
+          vim.fn.setline(nr, renumbered_line)
         elseif bullet.type == 'chk' then
           -- Reset the checkbox marker if it already exists, or blank otherwise
           local marker = ' '
           if bullet.checkbox_marker ~= nil then
             marker = bullet.checkbox_marker
           end
-          H.set_checkbox(line.nr, marker)
+          H.set_checkbox(nr, marker)
         end
       end
     end
@@ -1085,34 +1136,33 @@ end
 Bullets.renumber_whole_list = function(start_pos, end_pos)
   -- Renumbers the whole list containing the cursor.
   -- Does not renumber across blank lines.
-  -- Takes 2 optional arguments containing starting and ending cursor positions
-  -- so that we can reset the existing visual selection after renumbering.
-  local spos = start_pos or {}
-  local epos = end_pos or {}
+  -- local spos = start_pos or {}
+  -- local epos = end_pos or {}
   local first_line = H.first_bullet_line(vim.fn.line('.'))
   local last_line = H.last_bullet_line(vim.fn.line('.'))
   if first_line > 0 and last_line > 0 then
     -- Create a visual selection around the current list so that we can call
     -- renumber_selection() to do the renumbering.
-    vim.fn.setpos("'<", {0, first_line, 1, 0})
-    vim.fn.setpos("'>", {0, last_line, 1, 0})
-    Bullets.renumber_selection()
-    if next(spos) ~= nil and next(epos) ~= nil then
-      -- Reset the starting visual selection
-      vim.fn.setpos("'<", {0, spos[1], spos[2], 0})
-      vim.fn.setpos("'>", {0, epos[1], epos[2], 0})
-      vim.cmd("normal! gv")
-    end
+    -- vim.fn.setpos("'<", {0, first_line, 1, 0})
+    -- vim.fn.setpos("'>", {0, last_line, 1, 0})
+    -- Bullets.renumber_selection()
+    -- if next(spos) ~= nil and next(epos) ~= nil then
+    --   -- Reset the starting visual selection
+    --   vim.fn.setpos("'<", {0, spos[1], spos[2], 0})
+    --   vim.fn.setpos("'>", {0, epos[1], epos[2], 0})
+    --   vim.cmd("normal! gv")
+    -- end
+    Bullets.renumber_lines(first_line, last_line)
   end
 end
 
-Bullets.change_bullet_level_and_renumber = function(direction)
-  -- Calls H.change_bullet_level and then renumber_whole_list if required
-  H.change_bullet_level(direction)
-  if Bullets.config.renumber then
-    Bullets.renumber_whole_list()
-  end
-end
+-- Bullets.change_bullet_level_and_renumber = function(direction)
+--   -- Calls H.change_bullet_level and then renumber_whole_list if required
+--   H.change_bullet_level(direction)
+--   if Bullets.config.renumber then
+--     Bullets.renumber_whole_list()
+--   end
+-- end
 
 Bullets.insert_new_bullet = function(trigger)
   local curr_line_num = vim.fn.line('.')
@@ -1175,7 +1225,7 @@ Bullets.insert_new_bullet = function(trigger)
         -- indent if previous line ended in a colon
         if indent_next then
           -- demote the new bullet
-          Bullets.change_bullet_level_and_renumber(-1)
+          H.change_line_bullet_level(-1, next_line_num)
           -- reset cursor position after indenting
           col = string.len(vim.fn.getline(next_line_num)) + 1
           vim.fn.setpos('.', {0, next_line_num, col})
