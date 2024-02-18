@@ -484,9 +484,9 @@ H.change_line_bullet_level = function(direction, lnum)
   if next(curr_line) == nil then
     -- If the current line is not a bullet then don't do anything else.
     -- TODO: feedkeys
-    local normal_mode = vim.fn.mode() == 'n'
+    local insert_mode = vim.fn.mode() == 'i'
 
-    if normal_mode then
+    if insert_mode then
       vim.cmd("startinsert!")
     end
 
