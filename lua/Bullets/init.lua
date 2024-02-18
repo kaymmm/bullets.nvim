@@ -181,7 +181,6 @@ H.parse_bullet = function(line_num, input_text)
   local std_bullet_regex = '^((%s*)([%+%-%*%.])()()(%s+))(.*)'
   local checkbox_bullet_regex = '^((%s*)([%-%*%+]) %[([' .. Bullets.config.checkbox.markers .. ' xX])%]()(%s+))(.*)'
   local num_bullet_regex  = '^((%s*)(%d+)()([%.%)])(%s+))(.*)'
-  -- local rom_bullet_regex = '((%s*)(M?m?M?m?M?m?M?m?C?c?M?m?D?d?C?c?C?c?C?c?X?x?C?c?L?l?X?x?X?x?X?x?I?i?X?x?V?v?I?i?I?i?I?i?)()([%.%)])(%s+))(.*)'
   local rom_bullet_regex  = '\\v\\C^((\\s*)(M{0,4}%(CM|CD|D?C{0,3})%(XC|XL|L?X{0,3})%(IX|IV|V?I{0,3})|m{0,4}%(cm|cd|d?c{0,3})%(xc|xl|l?x{0,3})%(ix|iv|v?i{0,3}))()(\\.|\\))(\\s+))(.*)'
   local max = tostring(Bullets.config.alpha.len)
   local az = "[%a]"
@@ -190,7 +189,6 @@ H.parse_bullet = function(line_num, input_text)
     abc = abc .. az .. "?"
   end
   local abc_bullet_regex = '^((%s*)(' .. abc .. ')()([%.%)])(%s+))(.*)'
-  -- abc_bullet_regex = '^((%s*)([%a]?[%a]?)()([%.%)])(%s+))(.*)'
 
   local matches = {string.find(input_text, checkbox_bullet_regex)}
 
@@ -205,7 +203,6 @@ H.parse_bullet = function(line_num, input_text)
   if next(matches) ~= nil then
     return H.define_bullet(matches,'num',line_num)
   end
-  -- matches = {string.find(input_text, rom_bullet_regex)}
   matches = vim.fn.matchlist(input_text, rom_bullet_regex)
   if next(matches) ~= nil then
     table.insert(matches, 1, 0)
@@ -218,39 +215,6 @@ H.parse_bullet = function(line_num, input_text)
 
   return {}
 end
--- local function parse_bullet(line_num, input_text)
---   local std_bullet_regex = '\\v(^(\\s*)(-|\\*+|\\.+|#\\.|\\+|\\\\item)()()(\\s+))(.*)'
---   local checkbox_bullet_regex = '\\v(^(\\s*)([-\\*] \\[([' .. Bullets.config.checkbox.markers .. ' xX])?\\])()(\\s+))(.*)'
---   local num_bullet_regex  = '\\v^((\\s*)(\\d+)()(\\.|\\))(\\s+))(.*)'
---   local rom_bullet_regex  = '\\v\\C^((\\s*)(M{0,4}%(CM|CD|D?C{0,3})%(XC|XL|L?X{0,3})%(IX|IV|V?I{0,3})|m{0,4}%(cm|cd|d?c{0,3})%(xc|xl|l?x{0,3})%(ix|iv|v?i{0,3}))()(\\.|\\))(\\s+))(.*)'
---   local max = tostring(Bullets.config.alpha.len)
---   local abc_bullet_regex = '\\v^((\\s*)(\\u{1,' .. max .. '}|\\l{1,' .. max .. '})()(\\.|\\))(\\s+))(.*)'
-
---   local bullets = {}
---   local  matches = vim.fn.matchlist(input_text, checkbox_bullet_regex)
---   if next(matches) ~= nil then
---     table.insert(bullets, H.define_bullet(matches,'chk',line_num))
---     return H.define_bullet(matches,'chk',line_num)
---   end
---   matches = vim.fn.matchlist(input_text, std_bullet_regex)
---   if next(matches) ~= nil then
---     return H.define_bullet(matches,'std',line_num)
---   end
---   matches = vim.fn.matchlist(input_text, rom_bullet_regex)
---   if next(matches) ~= nil then
---     return H.define_bullet(matches,'rom',line_num)
---   end
---   matches = vim.fn.matchlist(input_text, abc_bullet_regex)
---   if next(matches) ~= nil then
---     return H.define_bullet(matches,'abc',line_num)
---   end
---   matches = vim.fn.matchlist(input_text, num_bullet_regex)
---   if next(matches) ~= nil then
---     return H.define_bullet(matches,'num',line_num)
---   end
-
---   return {}
--- end
 
 H.closest_bullet_types = function(from_line_num, max_indent)
   local lnum = from_line_num
@@ -296,12 +260,6 @@ H.find_by_type = function(bullet_types, type)
   end
   return {}
 end
-
--- local function has_rom_and_abc(bullet_types)
---   local has_rom = H.contains_type(bullet_types, 'rom')
---   local has_abc = H.contains_type(bullet_types, 'abc')
---   return has_rom and has_abc
--- end
 
 H.has_rom_or_abc = function(bullet_types)
   local has_rom = H.contains_type(bullet_types, 'rom')
@@ -396,7 +354,6 @@ end
 -- Roman numeral conversion {{{
 -- <http//gist.github.com/efrederickson/4080372>
 H.num_to_rom = function(s, islower) --s = tostring(s)
-  -- s = tonumber(s)
   local numbers = { 1, 5, 10, 50, 100, 500, 1000 }
   local chars = { "i", "v", "x", "l", "c", "d", "m" }
   if not s or s ~= s then error"Unable to convert to number" end
@@ -410,7 +367,6 @@ H.num_to_rom = function(s, islower) --s = tostring(s)
       ret = ret .. chars[i]
       s = s - num
     end
-    --for j = i - 1, 1, -1 do
     for j = 1, i - 1 do
       local n2 = numbers[j]
       if s - (num - n2) >= 0 and s < num and s > 0 and num - n2 ~= n2 then
@@ -469,19 +425,6 @@ H.rom_to_num = function(s)
 end
 -- }}}
 
--- local function pad_to_length(str, len)
---   if vim.api.nvim_get_var("bullets_pad_right") == 0 then
---     return str
---   end
---   local len1 = len - string.len(str)
---   local str1 = str
---   while len1 > 0 do
---     str1 = str1 .. ' '
---     len1 = len1 - 1
---   end
---   return str1
--- end
-
 H.next_rom_bullet = function(bullet)
   local islower = bullet.bullet == string.lower(bullet.bullet)
   return H.num_to_rom(H.rom_to_num(bullet.bullet) + 1, islower)
@@ -497,20 +440,20 @@ H.next_num_bullet = function(bullet)
 end
 
 H.next_chk_bullet = function(bullet)
-  return string.sub(bullet.bullet, 1, 1) .. ' [' .. string.sub(Bullets.config.checkbox.markers, 1, 1) .. ']'
+  return string.sub(bullet.bullet, 1, 1) .. " [" .. string.sub(Bullets.config.checkbox.markers, 1, 1) .. "]"
 end
 
 H.next_bullet_str = function(bullet)
   local bullet_type = bullet.type
-  local next_bullet_marker = ''
+  local next_bullet_marker = ""
 
-  if bullet_type == 'rom' then
+  if bullet_type == "rom" then
     next_bullet_marker = H.next_rom_bullet(bullet)
-  elseif bullet_type == 'abc' then
+  elseif bullet_type == "abc" then
     next_bullet_marker = H.next_abc_bullet(bullet)
-  elseif bullet_type == 'num' then
+  elseif bullet_type == "num" then
     next_bullet_marker = H.next_num_bullet(bullet)
-  elseif bullet_type == 'chk' then
+  elseif bullet_type == "chk" then
     next_bullet_marker = H.next_chk_bullet(bullet)
   else
     next_bullet_marker = bullet.bullet
@@ -524,17 +467,14 @@ H.line_ends_in_colon = function(lnum)
 end
 
 H.change_line_bullet_level = function(direction, lnum)
-  -- local lnum = vim.fn.line('.')
   local curr_line = H.parse_bullet(lnum, vim.fn.getline(lnum))
 
   if direction == 1 then
     if next(curr_line) ~= nil and vim.fn.indent(lnum) == 0 then
       -- Promoting a bullet at the highest level will delete the bullet
       vim.fn.setline(lnum, curr_line[0].text_after_bullet)
-      -- vim.cmd("normal! $")
       return
     else
-      -- vim.cmd("normal! <<$")
       vim.cmd(lnum .. "normal! <<")
     end
   else
@@ -645,20 +585,6 @@ end
 
 Bullets.change_bullet_level = function(direction, is_visual)
   -- Changes the bullet level for each of the selected lines
-  -- local start_val = { unpack(vim.fn.getpos("'<"), 2, 3) }
-  -- local end_val = { unpack(vim.fn.getpos("'>"), 2, 3) }
-  -- local selected_lines = {start_val[1]}
-  -- local j = 1
-  -- for i = start_val[1], end_val[1] do
-  --   selected_lines[j] = i
-  --   j = j + 1
-  -- end
-  -- for k, lnum in ipairs(selected_lines) do
-  --   -- Iterate the cursor position over each line and then call
-  --   -- H.change_bullet_level for that cursor position.
-  --   vim.fn.setpos('.', {0, lnum, 1, 0})
-  --   H.change_bullet_level(direction)
-  -- end
   local sel = H.get_selection(is_visual)
   for lnum = sel.start_line, sel.end_line do
     H.change_line_bullet_level(direction, lnum)
@@ -668,7 +594,6 @@ Bullets.change_bullet_level = function(direction, is_visual)
     -- renumbering the list.
     Bullets.renumber_whole_list()
   end
-  -- vim.cmd("normal! gv")
   H.set_selection(sel)
 end
 
@@ -730,38 +655,21 @@ H.last_bullet_line = function(line_num, min_indent)
   return last_line
 end
 
-H.get_visual_selection_lines = function()
-  local pos1 = vim.fn.getpos("'<")
-  local pos2 = vim.fn.getpos("'>")
-  local lines = vim.fn.getline(pos1[2], pos2[2])
-  local inclusive = 2
-  if vim.api.nvim_get_option_value("selection") == "inclusive" then
-    inclusive = 1
-  end
-  lines[#lines] = string.sub(lines[#lines], 1, pos2[3] - inclusive)
-  lines[1] = string.sub(lines[1], pos1[2] - 1)
-  local index = pos1[2]
-  local lines_with_index = {}
-  for _, line in ipairs(lines) do
-    local tmp = {}
-    tmp['text'] = line
-    tmp['nr'] = index
-    table.insert(lines_with_index, tmp)
-    index = index + 1
-  end
-  return lines_with_index
-end
-
 H.get_selection = function(is_visual)
   local sel = {}
-  local mode = is_visual and vim.fn.visualmode() or ""
-  if mode == "v" or mode == "V" or mode == "<C-v>" then
-    local start_line, start_col = vim.fn.getpos("'<")[1], vim.fn.getpos("'>")[2]
-    sel.start_line = start_line
-    sel.start_offset = string.len(vim.fn.getline(sel.start_line)) - start_col
-    local end_line, end_col = vim.fn.getpos("'>")[1], vim.fn.getpos("'>")[2]
-    sel.end_line = end_line
-    sel.end_offset = string.len(vim.fn.getline(sel.end_line)) - end_col
+  local mode = ""
+  if is_visual ~= 0 then
+    mode = vim.fn.visualmode()
+  end
+  if mode == "v" or mode == "V" or mode == "\\<C-v>" then
+    -- local start_line, start_col = vim.fn.getpos("'<")[2], vim.fn.getpos("'>")[3]
+    local start_line = { unpack(vim.fn.getpos("'<"), 2, 3) }
+    sel.start_line = start_line[1]
+    sel.start_offset = string.len(vim.fn.getline(sel.start_line)) - start_line[2]
+    -- local end_line, end_col = vim.fn.getpos("'>")[2], vim.fn.getpos("'>")[3]
+    local end_line = { unpack(vim.fn.getpos("'>"), 2, 3) }
+    sel.end_line = end_line[1]
+    sel.end_offset = string.len(vim.fn.getline(sel.end_line)) - end_line[2]
     sel.visual_mode = mode
   else
     sel.start_line = vim.fn.line(".")
@@ -778,13 +686,14 @@ H.set_selection = function(sel)
   local end_col = string.len(vim.fn.getline(sel.end_line)) - sel.end_offset
   vim.fn.cursor(sel.start_line, start_col)
   if sel.start_line ~= sel.end_line or start_col ~= end_col then
-    if sel.visual_mode == "<C-v>" then
-      vim.cmd("normal! <C-v>")
-    else
-      if sel.visual_mode == "V" or sel.visual_mode == "v" then
-        vim.cmd("normal! v")
-      end
+    -- if sel.visual_mode == "<C-v>" then
+    -- broken, need to figure out how to escape \<C-v>
+    --   vim.cmd("normal! <C-v>")
+    -- else
+    if sel.visual_mode == "V" or sel.visual_mode == "v" then
+      vim.cmd("normal! v")
     end
+    -- end
     vim.fn.cursor(sel.end_line, end_col)
   end
 end
@@ -1039,9 +948,6 @@ Bullets.renumber_lines = function(start_ln, end_ln)
   local prev_indent = -1
   local list = {}  -- stores all the info about the current outline/list
 
-  -- for _, line in ipairs(selection_lines) do
-    -- local indent = vim.fn.indent(line.nr)
-    -- local bullet = H.closest_bullet_types(line.nr, indent)
   for nr = start_ln, end_ln do
     local indent = vim.fn.indent(nr)
     local bullet = H.closest_bullet_types(nr, indent)
@@ -1056,7 +962,6 @@ Bullets.renumber_lines = function(start_ln, end_ln)
       -- skip wrapped lines and lines that aren't bullets
       if (indent > prev_indent or list[indent] == nil) and bullet.type ~= 'chk' and bullet.type ~= 'std' then
         if list[indent] == nil then
-          -- list[indent] = {index = 1}
           if bullet.type == 'num' then
             list[indent] = {index = bullet.bullet}
           elseif bullet.type == 'rom' then
@@ -1136,33 +1041,12 @@ end
 Bullets.renumber_whole_list = function(start_pos, end_pos)
   -- Renumbers the whole list containing the cursor.
   -- Does not renumber across blank lines.
-  -- local spos = start_pos or {}
-  -- local epos = end_pos or {}
   local first_line = H.first_bullet_line(vim.fn.line('.'))
   local last_line = H.last_bullet_line(vim.fn.line('.'))
   if first_line > 0 and last_line > 0 then
-    -- Create a visual selection around the current list so that we can call
-    -- renumber_selection() to do the renumbering.
-    -- vim.fn.setpos("'<", {0, first_line, 1, 0})
-    -- vim.fn.setpos("'>", {0, last_line, 1, 0})
-    -- Bullets.renumber_selection()
-    -- if next(spos) ~= nil and next(epos) ~= nil then
-    --   -- Reset the starting visual selection
-    --   vim.fn.setpos("'<", {0, spos[1], spos[2], 0})
-    --   vim.fn.setpos("'>", {0, epos[1], epos[2], 0})
-    --   vim.cmd("normal! gv")
-    -- end
     Bullets.renumber_lines(first_line, last_line)
   end
 end
-
--- Bullets.change_bullet_level_and_renumber = function(direction)
---   -- Calls H.change_bullet_level and then renumber_whole_list if required
---   H.change_bullet_level(direction)
---   if Bullets.config.renumber then
---     Bullets.renumber_whole_list()
---   end
--- end
 
 Bullets.insert_new_bullet = function(trigger)
   local curr_line_num = vim.fn.line('.')
