@@ -1,6 +1,6 @@
 # Bullets.nvim
 
-A lua port of [bullets.nvim](https://github.com/dkarter/bullets.vim)
+A lua port of [bullets.vim](https://github.com/dkarter/bullets.vim)
 
 ## Setup
 
