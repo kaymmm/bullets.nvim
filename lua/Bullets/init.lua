@@ -65,22 +65,23 @@ H.setup_config = function(config)
   -- General idea: if some table elements are not present in user-supplied
   -- `config`, take them from default config
 
-  vim.validate('config', config, 'table', true)
+  -- temporarily disable validation until the new format hits stable neovim
+  -- vim.validate('config', config, 'table', true)
   config = vim.tbl_deep_extend('force', H.default_config, config or {})
-  vim.validate('colon_indent', config.colon_indent, 'boolean', true)
-  vim.validate('delete_last_bullet', config.delete_last_bullet, 'boolean', true)
-  vim.validate('empty_buffers', config.empty_buffers, 'boolean', true)
-  vim.validate('file_types', config.file_types, 'table', true)
-  vim.validate('line_spacing', config.line_spacing, 'number', true)
-  vim.validate('mappings', config.mappings, 'boolean', true)
-  vim.validate('outline_levels', config.outline_levels, 'table', true)
-  vim.validate('renumber', config.renumber, 'boolean', true)
-  vim.validate('alpha', config.alpha, 'table', true)
-  vim.validate('checkbox', config.checkbox, 'table', true)
-  vim.validate('alpha.len', config.alpha.len, 'number', true)
-  vim.validate('checkbox.nest', config.checkbox.nest, 'boolean', true)
-  vim.validate('checkbox.markers', config.checkbox.markers, 'string', true)
-  vim.validate('checkbox.toggle_partials', config.checkbox.toggle_partials, 'boolean', true)
+  -- vim.validate('colon_indent', config.colon_indent, 'boolean', true)
+  -- vim.validate('delete_last_bullet', config.delete_last_bullet, 'boolean', true)
+  -- vim.validate('empty_buffers', config.empty_buffers, 'boolean', true)
+  -- vim.validate('file_types', config.file_types, 'table', true)
+  -- vim.validate('line_spacing', config.line_spacing, 'number', true)
+  -- vim.validate('mappings', config.mappings, 'boolean', true)
+  -- vim.validate('outline_levels', config.outline_levels, 'table', true)
+  -- vim.validate('renumber', config.renumber, 'boolean', true)
+  -- vim.validate('alpha', config.alpha, 'table', true)
+  -- vim.validate('checkbox', config.checkbox, 'table', true)
+  -- vim.validate('alpha.len', config.alpha.len, 'number', true)
+  -- vim.validate('checkbox.nest', config.checkbox.nest, 'boolean', true)
+  -- vim.validate('checkbox.markers', config.checkbox.markers, 'string', true)
+  -- vim.validate('checkbox.toggle_partials', config.checkbox.toggle_partials, 'boolean', true)
   return config
 end
 
