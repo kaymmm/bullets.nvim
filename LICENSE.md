@@ -15,7 +15,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 -------
 
-Portions of this software were derived from https://github.com/bullets-nvim/bullets.nvim
+Portions of this software were derived from https://github.com/bullets-nvim/bullets.vim
 originally licensed under the MIT license:
 
 The MIT License (MIT)
