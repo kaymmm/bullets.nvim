@@ -68,20 +68,20 @@ H.setup_config = function(config)
   -- temporarily disable validation until the new format hits stable neovim
   -- vim.validate('config', config, 'table', true)
   config = vim.tbl_deep_extend('force', H.default_config, config or {})
-  -- vim.validate('colon_indent', config.colon_indent, 'boolean', true)
-  -- vim.validate('delete_last_bullet', config.delete_last_bullet, 'boolean', true)
-  -- vim.validate('empty_buffers', config.empty_buffers, 'boolean', true)
-  -- vim.validate('file_types', config.file_types, 'table', true)
-  -- vim.validate('line_spacing', config.line_spacing, 'number', true)
-  -- vim.validate('mappings', config.mappings, 'boolean', true)
-  -- vim.validate('outline_levels', config.outline_levels, 'table', true)
-  -- vim.validate('renumber', config.renumber, 'boolean', true)
-  -- vim.validate('alpha', config.alpha, 'table', true)
-  -- vim.validate('checkbox', config.checkbox, 'table', true)
-  -- vim.validate('alpha.len', config.alpha.len, 'number', true)
-  -- vim.validate('checkbox.nest', config.checkbox.nest, 'boolean', true)
-  -- vim.validate('checkbox.markers', config.checkbox.markers, 'string', true)
-  -- vim.validate('checkbox.toggle_partials', config.checkbox.toggle_partials, 'boolean', true)
+  vim.validate('colon_indent', config.colon_indent, 'boolean', true)
+  vim.validate('delete_last_bullet', config.delete_last_bullet, 'boolean', true)
+  vim.validate('empty_buffers', config.empty_buffers, 'boolean', true)
+  vim.validate('file_types', config.file_types, 'table', true)
+  vim.validate('line_spacing', config.line_spacing, 'number', true)
+  vim.validate('mappings', config.mappings, 'boolean', true)
+  vim.validate('outline_levels', config.outline_levels, 'table', true)
+  vim.validate('renumber', config.renumber, 'boolean', true)
+  vim.validate('alpha', config.alpha, 'table', true)
+  vim.validate('checkbox', config.checkbox, 'table', true)
+  vim.validate('alpha.len', config.alpha.len, 'number', true)
+  vim.validate('checkbox.nest', config.checkbox.nest, 'boolean', true)
+  vim.validate('checkbox.markers', config.checkbox.markers, 'string', true)
+  vim.validate('checkbox.toggle_partials', config.checkbox.toggle_partials, 'boolean', true)
   return config
 end
 
@@ -162,7 +162,7 @@ H.define_bullet = function(match,btype,line_num)
   local bullet = {}
   if next(match) ~= nil then
     bullet.type = btype
-    bullet.bullet_length = string.len(match[3])
+    bullet.bullet_length = vim.str_utfindex(match[3])
     bullet.leading_space = match[4]
     bullet.bullet = match[5]
     bullet.checkbox_marker = type(match[6]) ~= "number" and match[6] or ""
@@ -290,10 +290,10 @@ H.abc2dec = function(abc)
   local a = 'a'
   local abc1 = string.sub(cba, 1, 1)
   local dec = abc1:byte() - a:byte() + 1
-  if string.len(cba) == 1 then
+  if vim.str_utfindex(cba) == 1 then
     return dec
   else
-    return math.floor(26 ^ string.len(abc) - 1) * dec + H.abc2dec(string.sub(abc, 1, string.len(abc) - 1))
+    return math.floor(26 ^ vim.str_utfindex(abc) - 1) * dec + H.abc2dec(string.sub(abc, 1, vim.str_utfindex(abc) - 1))
   end
 end
 
@@ -393,7 +393,7 @@ H.rom_to_num = function(s)
   s = string.lower(s)
   local ret = 0
   local i = 1
-  while i <= string.len(s) do
+  while i <= vim.str_utfindex(s) do
     --for i = 1, len() do
     local c = string.sub(s, i, i)
     if c ~= " " then -- allow spaces
@@ -460,7 +460,7 @@ end
 
 H.line_ends_in_colon = function(lnum)
   local line = vim.fn.getline(lnum)
-  return string.sub(line, string.len(line)) == ":"
+  return string.sub(line, vim.str_utfindex(line)) == ":"
 end
 
 H.change_line_bullet_level = function(direction, lnum)
@@ -662,15 +662,15 @@ H.get_selection = function(is_visual)
     -- local start_line, start_col = vim.fn.getpos("'<")[2], vim.fn.getpos("'>")[3]
     local start_line = { unpack(vim.fn.getpos("'<"), 2, 3) }
     sel.start_line = start_line[1]
-    sel.start_offset = string.len(vim.fn.getline(sel.start_line)) - start_line[2]
+    sel.start_offset = vim.str_utfindex(vim.fn.getline(sel.start_line)) - start_line[2]
     -- local end_line, end_col = vim.fn.getpos("'>")[2], vim.fn.getpos("'>")[3]
     local end_line = { unpack(vim.fn.getpos("'>"), 2, 3) }
     sel.end_line = end_line[1]
-    sel.end_offset = string.len(vim.fn.getline(sel.end_line)) - end_line[2]
+    sel.end_offset = vim.str_utfindex(vim.fn.getline(sel.end_line)) - end_line[2]
     sel.visual_mode = mode
   else
     sel.start_line = vim.fn.line(".")
-    sel.start_offset = string.len(vim.fn.getline(sel.start_line)) - vim.fn.col(".")
+    sel.start_offset = vim.str_utfindex(vim.fn.getline(sel.start_line)) - vim.fn.col(".")
     sel.end_line = sel.start_line
     sel.end_offset = sel.start_offset
     sel.visual_mode = ""
@@ -679,8 +679,8 @@ H.get_selection = function(is_visual)
 end
 
 H.set_selection = function(sel)
-  local start_col = string.len(vim.fn.getline(sel.start_line)) - sel.start_offset
-  local end_col = string.len(vim.fn.getline(sel.end_line)) - sel.end_offset
+  local start_col = vim.str_utfindex(vim.fn.getline(sel.start_line)) - sel.start_offset
+  local end_col = vim.str_utfindex(vim.fn.getline(sel.end_line)) - sel.end_offset
   vim.fn.cursor(sel.start_line, start_col)
   if sel.start_line ~= sel.end_line or start_col ~= end_col then
     -- if sel.visual_mode == "<C-v>" then
@@ -888,7 +888,7 @@ H.set_child_checkboxes = function(lnum, checked)
     for child in children do
       local marker
       if checked then
-        marker = string.sub(checkbox_markers, string.len(checkbox_markers), 1)
+        marker = string.sub(checkbox_markers, vim.str_utfindex(checkbox_markers), 1)
       else
         marker = string.sub(checkbox_markers, 1, 1)
       end
@@ -931,7 +931,7 @@ H.get_level = function(bullet)
   if next(bullet) == nil or bullet.type ~= 'std' then
     return 0
   else
-    return string.len(bullet.bullet)
+    return vim.str_utfindex(bullet.bullet)
   end
 end
 
@@ -1019,7 +1019,7 @@ Bullets.renumber_lines = function(start_ln, end_ln)
           -- if list[indent].index > 1 then
           --   new_bullet = pad_to_length(new_bullet, list[indent].pad_len)
           -- end
-          -- list[indent].pad_len = string.len(new_bullet)
+          -- list[indent].pad_len = vim.str_utfindex(new_bullet)
           local renumbered_line = bullet.leading_space .. new_bullet .. bullet.text_after_bullet
           vim.fn.setline(nr, renumbered_line)
         elseif bullet.type == 'chk' then
@@ -1046,8 +1046,8 @@ Bullets.renumber_whole_list = function(start_pos, end_pos)
 end
 
 Bullets.insert_new_bullet = function(trigger)
+  local curr_line_col = vim.fn.col('.')
   local curr_line_num = vim.fn.line('.')
-  local cursor_pos = vim.fn.getcurpos('.')
   local line_text = vim.fn.getline('.')
   local next_line_num = curr_line_num + Bullets.config.line_spacing
   local curr_indent = vim.fn.indent(curr_line_num)
@@ -1055,16 +1055,15 @@ Bullets.insert_new_bullet = function(trigger)
   -- need to find which line starts the previous bullet started at and start
   -- searching up from there
   local send_return = true
-  local normal_mode = vim.fn.mode() == 'n'
   local indent_next = H.line_ends_in_colon(curr_line_num) and Bullets.config.colon_indent
   local next_bullet_list = {}
+  local cr_key = vim.api.nvim_replace_termcodes('<CR>', true, false, true)
 
   -- check if current line is a bullet and we are at the end of the line (for
   -- insert mode only)
   if next(bullet_types) ~= nil then
     local bullet = H.resolve_bullet_type(bullet_types)
-    local is_at_eol = string.len(vim.fn.getline('.')) + 1 == vim.fn.col('.')
-    if bullet ~= nil and next(bullet) ~= nil and (normal_mode or is_at_eol) then
+    if (bullet ~= nil) and (next(bullet) ~= nil) then
       -- was any text entered after the bullet?
       if bullet.text_after_bullet == '' then
         -- We don't want to create a new bullet if the previous one was not used,
@@ -1076,31 +1075,26 @@ Bullets.insert_new_bullet = function(trigger)
       elseif not (bullet.type == 'abc' and H.abc2dec(bullet.bullet) + 1 > Bullets.config.abc_max) then
         -- get text after cursor
         local text_after_cursor = ''
-        if string.len(vim.fn.getline('.')) > vim.fn.col('.') and trigger == 'cr' then
-          text_after_cursor = string.sub(line_text, cursor_pos[3])
-          vim.fn.setline('.', string.sub(line_text,1,cursor_pos[3] - 1))
+        if string.len(line_text) >= (curr_line_col) and trigger == 'cr' then
+          text_after_cursor = vim.fn.strpart(line_text, curr_line_col - 1, vim.str_utfindex(line_text))
+          vim.fn.setline('.', vim.fn.strpart(line_text, 0, curr_line_col - 1))
         end
 
         local next_bullet = H.next_bullet_str(bullet) .. text_after_cursor
-        -- if bullet.type == 'chk' then
         next_bullet_list = {next_bullet}
-        -- else
-        --   next_bullet_list = {pad_to_length(next_bullet, bullet.bullet_length)}
-        -- end
 
         -- prepend blank lines if desired
-        if Bullets.config.line_spacing > 1 then
+        if trigger ~= 'cr' and Bullets.config.line_spacing > 1 then
           for i = 1,Bullets.config.line_spacing do
             table.insert(next_bullet_list, i, '')
           end
         end
 
-
         -- insert next bullet
         vim.fn.append(curr_line_num, next_bullet_list)
 
         -- go to next line after the new bullet
-        local col = string.len(vim.fn.getline(next_line_num)) + 1
+        local col = vim.str_utfindex(vim.fn.getline(next_line_num)) + 1
         vim.fn.setpos('.', {0, next_line_num, col})
 
         -- indent if previous line ended in a colon
@@ -1108,7 +1102,7 @@ Bullets.insert_new_bullet = function(trigger)
           -- demote the new bullet
           H.change_line_bullet_level(-1, next_line_num)
           -- reset cursor position after indenting
-          col = string.len(vim.fn.getline(next_line_num)) + 1
+          col = vim.str_utfindex(vim.fn.getline(next_line_num)) + 1
           vim.fn.setpos('.', {0, next_line_num, col})
         elseif Bullets.config.renumber then
           Bullets.renumber_whole_list()
@@ -1119,13 +1113,12 @@ Bullets.insert_new_bullet = function(trigger)
   end
 
   if send_return then
-    if trigger == "cr" and normal_mode then
+    if trigger == "cr" then
       vim.cmd('startinsert')
     elseif trigger == 'o' then
       vim.cmd('startinsert!')
     end
-    local keys = vim.api.nvim_replace_termcodes('<CR>', true, false, true)
-    vim.api.nvim_feedkeys(keys, 'n', true)
+    vim.api.nvim_feedkeys(cr_key, 'n', true)
   elseif trigger == 'o' then
     vim.cmd('startinsert!')
   end
