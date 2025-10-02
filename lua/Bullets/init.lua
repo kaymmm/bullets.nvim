@@ -65,8 +65,6 @@ H.setup_config = function(config)
   -- General idea: if some table elements are not present in user-supplied
   -- `config`, take them from default config
 
-  -- temporarily disable validation until the new format hits stable neovim
-  -- vim.validate('config', config, 'table', true)
   config = vim.tbl_deep_extend('force', H.default_config, config or {})
   vim.validate('colon_indent', config.colon_indent, 'boolean', true)
   vim.validate('delete_last_bullet', config.delete_last_bullet, 'boolean', true)
@@ -99,19 +97,19 @@ H.apply_config = function(config)
   vim.api.nvim_create_user_command('BulletDemoteVisual', function() Bullets.change_bullet_level(-1, 1) end, {range = true})
   vim.api.nvim_create_user_command('BulletPromote', function() Bullets.change_bullet_level(1, 0) end, {})
   vim.api.nvim_create_user_command('BulletPromoteVisual', function() Bullets.change_bullet_level(1, 1) end, {range = true})
-  vim.api.nvim_create_user_command('InsertNewBulletCR', function() Bullets.insert_new_bullet("cr") end, {})
-  vim.api.nvim_create_user_command('InsertNewBulletO', function() Bullets.insert_new_bullet("o") end, {})
+  vim.api.nvim_create_user_command('InsertNewBullet', function() Bullets.insert_new_bullet("o") end, {})
   vim.api.nvim_create_user_command('RenumberList', function() Bullets.renumber_whole_list() end, {})
   vim.api.nvim_create_user_command('RenumberSelection', function() Bullets.renumber_selection() end, {range = true})
-  -- vim.api.nvim_create_user_command('SelectBullet', function() Bullets.select_bullet_item(vim.cmd.line('.')) end, {})
-  -- vim.api.nvim_create_user_command('SelectBulletText', function() Bullets.select_bullet_text(vim.cmd.line('.')) end, {})
   vim.api.nvim_create_user_command('SelectCheckbox', function() Bullets.select_checkbox(false) end, {})
   vim.api.nvim_create_user_command('SelectCheckboxInside', function() Bullets.select_checkbox(true) end, {})
   vim.api.nvim_create_user_command('ToggleCheckbox', function() Bullets.toggle_checkboxes_nested() end, {})
 
-  vim.api.nvim_set_keymap('i', '<Plug>(bullets-newline-cr)', '<C-O>:InsertNewBulletCR<cr>', {noremap = true, silent = true})
-  vim.api.nvim_set_keymap('n', '<Plug>(bullets-newline-o)', ':InsertNewBulletO<cr>', {noremap = true, silent = true})
-  -- vim.api.nvim_set_keymap('n', '<Plug>(bullets-newline)', ':InsertNewBullet<cr>', {noremap = true, silent = true})
+  vim.api.nvim_set_keymap('i', '<Plug>(bullets-newline-cr)', '', {noremap = true, silent = true,
+    callback = function()
+      Bullets.insert_new_bullet('cr')
+    end
+    })
+  vim.api.nvim_set_keymap('n', '<Plug>(bullets-newline-o)', ':InsertNewBullet<cr>', {noremap = true, silent = true})
   vim.api.nvim_set_keymap('v', '<Plug>(bullets-renumber)', ':RenumberSelection<cr>', {noremap = true, silent = true})
   vim.api.nvim_set_keymap('n', '<Plug>(bullets-renumber)', ':RenumberList<cr>', {noremap = true, silent = true})
   vim.api.nvim_set_keymap('n', '<Plug>(bullets-toggle-checkbox)', ':ToggleCheckbox<cr>', {noremap = true, silent = true})
@@ -125,7 +123,6 @@ H.apply_config = function(config)
   if config.mappings then
     vim.api.nvim_create_augroup('BulletMaps', {clear = true})
     H.buf_map('imap', '<cr>', '<Plug>(bullets-newline-cr)')
-    -- H.buf_map('inoremap', '<C-CR>', '<CR>')
     H.buf_map('nmap', 'o', '<Plug>(bullets-newline-o)')
     H.buf_map('vmap', 'gN', '<Plug>(bullets-renumber)')
     H.buf_map('nmap', 'gN', '<Plug>(bullets-renumber)')
@@ -1046,7 +1043,7 @@ Bullets.renumber_whole_list = function(start_pos, end_pos)
 end
 
 Bullets.insert_new_bullet = function(trigger)
-  local curr_line_col = vim.fn.col('.')
+  local curr_line_col = vim.fn.getcursorcharpos()[3]
   local curr_line_num = vim.fn.line('.')
   local line_text = vim.fn.getline('.')
   local next_line_num = curr_line_num + Bullets.config.line_spacing
@@ -1075,9 +1072,17 @@ Bullets.insert_new_bullet = function(trigger)
       elseif not (bullet.type == 'abc' and H.abc2dec(bullet.bullet) + 1 > Bullets.config.abc_max) then
         -- get text after cursor
         local text_after_cursor = ''
-        if string.len(line_text) >= (curr_line_col) and trigger == 'cr' then
-          text_after_cursor = vim.fn.strpart(line_text, curr_line_col - 1, vim.str_utfindex(line_text))
-          vim.fn.setline('.', vim.fn.strpart(line_text, 0, curr_line_col - 1))
+        if trigger == 'cr' then
+          -- print(vim.fn.getcursorcharpos()[5])
+          -- if vim.fn.getcurpos()[3] <= vim.fn.strcharlen(line_text) then
+            -- This occurs when we are in insert mode at the end of the line
+            -- text_after_cursor = vim.fn.strpart(line_text, curr_line_col, vim.str_utfindex(line_text, "utf-8"))
+            -- vim.fn.setline('.', vim.fn.strpart(line_text, 0, curr_line_col))
+          -- elseif (string.len(line_text) >= curr_line_col) then
+          if (vim.fn.strcharlen(line_text) >= curr_line_col) then
+            text_after_cursor = vim.fn.strcharpart(line_text, curr_line_col - 1, vim.fn.strcharlen(line_text))
+            vim.fn.setline('.', vim.fn.strcharpart(line_text, 0, curr_line_col - 1))
+          end
         end
 
         local next_bullet = H.next_bullet_str(bullet) .. text_after_cursor
@@ -1094,7 +1099,7 @@ Bullets.insert_new_bullet = function(trigger)
         vim.fn.append(curr_line_num, next_bullet_list)
 
         -- go to next line after the new bullet
-        local col = vim.str_utfindex(vim.fn.getline(next_line_num)) + 1
+        local col = vim.str_utfindex(vim.fn.getline(next_line_num), "utf-8") + 1
         vim.fn.setpos('.', {0, next_line_num, col})
 
         -- indent if previous line ended in a colon
@@ -1102,7 +1107,7 @@ Bullets.insert_new_bullet = function(trigger)
           -- demote the new bullet
           H.change_line_bullet_level(-1, next_line_num)
           -- reset cursor position after indenting
-          col = vim.str_utfindex(vim.fn.getline(next_line_num)) + 1
+          col = vim.str_utfindex(vim.fn.getline(next_line_num), "utf-8") + 1
           vim.fn.setpos('.', {0, next_line_num, col})
         elseif Bullets.config.renumber then
           Bullets.renumber_whole_list()
