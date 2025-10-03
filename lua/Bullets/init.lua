@@ -1049,19 +1049,19 @@ Bullets.insert_new_bullet = function(trigger)
   local next_line_num = curr_line_num + Bullets.config.line_spacing
   local curr_indent = vim.fn.indent(curr_line_num)
   local bullet_types = H.closest_bullet_types(curr_line_num, curr_indent)
-  -- need to find which line starts the previous bullet started at and start
+  -- Need to find which line starts the previous bullet started at and start
   -- searching up from there
   local send_return = true
   local indent_next = H.line_ends_in_colon(curr_line_num) and Bullets.config.colon_indent
   local next_bullet_list = {}
   local cr_key = vim.api.nvim_replace_termcodes('<CR>', true, false, true)
 
-  -- check if current line is a bullet and we are at the end of the line (for
+  -- Check if current line is a bullet and we are at the end of the line (for
   -- insert mode only)
   if next(bullet_types) ~= nil then
     local bullet = H.resolve_bullet_type(bullet_types)
     if (bullet ~= nil) and (next(bullet) ~= nil) then
-      -- was any text entered after the bullet?
+      -- Was any text entered after the bullet?
       if bullet.text_after_bullet == '' then
         -- We don't want to create a new bullet if the previous one was not used,
         -- instead we want to delete the empty bullet - like word processors do
@@ -1072,17 +1072,9 @@ Bullets.insert_new_bullet = function(trigger)
       elseif not (bullet.type == 'abc' and H.abc2dec(bullet.bullet) + 1 > Bullets.config.abc_max) then
         -- get text after cursor
         local text_after_cursor = ''
-        if trigger == 'cr' then
-          -- print(vim.fn.getcursorcharpos()[5])
-          -- if vim.fn.getcurpos()[3] <= vim.fn.strcharlen(line_text) then
-            -- This occurs when we are in insert mode at the end of the line
-            -- text_after_cursor = vim.fn.strpart(line_text, curr_line_col, vim.str_utfindex(line_text, "utf-8"))
-            -- vim.fn.setline('.', vim.fn.strpart(line_text, 0, curr_line_col))
-          -- elseif (string.len(line_text) >= curr_line_col) then
-          if (vim.fn.strcharlen(line_text) >= curr_line_col) then
-            text_after_cursor = vim.fn.strcharpart(line_text, curr_line_col - 1, vim.fn.strcharlen(line_text))
-            vim.fn.setline('.', vim.fn.strcharpart(line_text, 0, curr_line_col - 1))
-          end
+        if trigger == 'cr' and (vim.fn.strcharlen(line_text) >= curr_line_col) then
+          text_after_cursor = vim.fn.strcharpart(line_text, curr_line_col - 1, vim.fn.strcharlen(line_text))
+          vim.fn.setline('.', vim.fn.strcharpart(line_text, 0, curr_line_col - 1))
         end
 
         local next_bullet = H.next_bullet_str(bullet) .. text_after_cursor
@@ -1098,11 +1090,11 @@ Bullets.insert_new_bullet = function(trigger)
         -- insert next bullet
         vim.fn.append(curr_line_num, next_bullet_list)
 
-        -- go to next line after the new bullet
+        -- Go to next line after the new bullet
         local col = vim.str_utfindex(vim.fn.getline(next_line_num), "utf-8") + 1
         vim.fn.setpos('.', {0, next_line_num, col})
 
-        -- indent if previous line ended in a colon
+        -- Indent if previous line ended in a colon
         if indent_next then
           -- demote the new bullet
           H.change_line_bullet_level(-1, next_line_num)
